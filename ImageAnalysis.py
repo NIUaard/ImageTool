@@ -14,23 +14,29 @@ import scipy.optimize
 import math 
 import matplotlib.pyplot as plt
 import ImageTool as imgtl
+from scipy import ndimage
 
 # you have to change this line to the directory where the data are located in
-UpperDir = "/Users/piot/ASTA_commissioning/laser_MLA/2015-11-18_COB_Divergence_measurements"
+FileDir = "./data_samples/"
 # one of the data set 
 SubDir   = "/"
 rootname = "0"
 
-upperfile="./"
 #/Users/piot/ASTA_commissioning/quadscan/X121_20150601//tight_focus/"
-Filename  ="nml-2015-11-20-2203-05-791.png"
+#FilenameBkgd  ="X101_bkg_0.png"
+#FilenameBeam  ="X101_img_0.png"
+
+FilenameBkgd  ="VC110bunches_bkg_0.png"
+FilenameBeam  ="VC110bunches_img_0.png"
+
+
 
 #nml-2015-06-01-2205-23-13076.png"
 
 
 FTsize=8
 
-test = 1  
+test = 0  
 # parameters
 bbox = 200
 cal  = 1
@@ -40,92 +46,99 @@ threshold = 0.
 
 #    fileonly = rootname+"-"+str(1+i)+".png"
 #    filename = UpperDir+"/"+SubDir+"/"+fileonly
-filename=upperfile+Filename
+filenameBeam=FileDir+FilenameBeam
+filenameBkgd=FileDir+FilenameBkgd
     
 # load the image 
 
 if test==0: 
-   IMG=imgtl.Load(filename)
-
+   IMGbeam=imgtl.Load(filenameBeam)
+   IMGbkgd=imgtl.Load(filenameBkgd)
+   IMG=1.*IMGbeam-IMGbkgd
+#   IMG=ndimage.gaussian_filter(IMGT, 2) 
+#   ndimage.gaussian_filter(IMGT, sigma=3)
 if test==1:
 # this makes a test image 
 # a gaussian curve
-#       IMG = 10.+np.random.rand((480,640))
-   IMG = np.zeros((480,640))
+#       IMG = 10.+np.random.rand((1296,1606))
+   IMGT = np.zeros((1296,1606))
+   BKGD = np.zeros((1296,1606))
+   IMG  = np.zeros((1296,1606))
    s   = np.shape(IMG)
 
    v   = np.linspace(0, s[0], s[0])
    h   = np.linspace(0, s[1], s[1])
-   sv  = 10.
-   sh  = 30.
+   sh  = 50.
+   sv  = 75.
+   alpha=-0.0
    for i in range(s[1]):
-      IMG[:,i]= 0.0+0.1*2.*(0.5-np.random.rand(s[0]))+np.exp (- (v-np.mean(v))**2/(2.*sv**2))*np.exp (- (h[i]-np.mean(h))**2/(2.*sh**2))
-      
+      BKGD[:,i]= 0.0+0.1*(1.0-np.random.rand(s[0]))
+      IMGT[:,i]= 0.0+0.1*(1.0-np.random.rand(s[0]))+np.exp (- (v-np.mean(v)-alpha*(h[i]-np.mean(h)))**2/(2.*sv**2))*np.exp (- (h[i]-np.mean(h))**2/(2.*sh**2))
+      IMG=IMGT-BKGD
+   
+   
 # display raw image    
 plt.figure()
 plt.subplot(2,2,1)
 imgtl.DisplayImage(IMG)
-plt.title('raw data::'+Filename,fontsize=FTsize)
+plt.title('raw data::'+FilenameBeam,fontsize=FTsize)
 plt.axis('off')
-# crop image 
-#    plt.figure()
 plt.subplot(2,2,2)
-IMGc=imgtl.AutoCrop(IMG, bbox)
+IMGc=imgtl.RemoveEdge(IMG, 100)
 imgtl.DisplayCalibratedProj(IMGc, cal, fudge)
-plt.title('cropped'+Filename,fontsize=FTsize)
+plt.title('cropped'+FilenameBeam,fontsize=FTsize)
 plt.axis('off')
-# threshold image 
-#    plt.figure()
 plt.subplot(2,2,3)
-IMGt=IMGc
+IMGt=ndimage.gaussian_filter(IMGc, 0) 
 # imgtl.Threshold(IMGc, threshold)
 imgtl.DisplayCalibratedProj(IMGt, cal, fudge)
-plt.title('cropped::'+Filename,fontsize=FTsize)
+plt.title('cropped::'+FilenameBeam,fontsize=FTsize)
 plt.axis('off')
 # compute profiles
 histx, histy, x, y = imgtl.GetImageProjection(IMGt,cal)   
 #    plt.figure()
 plt.subplot(2,2,4)
-plt.plot (x,histx,'o--')
-plt.plot (y,histy,'s--')
+x=x-x[np.argmax(histx)]
+y=y-y[np.argmax(histy)]
+plt.plot (x,histx,'-')
+plt.plot (y,histy,'-')
 plt.xlabel ('distance')
 plt.ylabel ('population')
-plt.title('profiles::'+Filename,fontsize=FTsize)
+plt.title('profiles::'+FilenameBeam,fontsize=FTsize)
 plt.show()
 # RMS calculations: 
-plt.figure()
+
 imgtl.stats1d(x, histx)
 imgtl.stats1d(y, histy)
 imgtl.stats2d(x,y,IMGt)
-norm0, meanx0, meany0, meanI0, stdx0, stdy0, stdI0, Wx0, Wy0, averImage0 = imgtl.window_scan2d(IMGt, 1., 100, 0.00)
+
+
+norm0, meanx0, meany0, meanI0, stdx0, stdy0, stdI0, correl0, Wx0, Wy0, averImage0, IMGf = \
+                 imgtl.window_scan2dthreshold(IMGt, 1., 50, 0.00)
+
+plt.figure()
 plt.subplot (2,2,1)
 plt.plot (Wx0, averImage0,'o')
 plt.subplot (2,2,2)
-plt.plot (Wx0, stdI0,'ro')
+plt.plot (Wx0, stdx0,'ro')
+plt.plot (Wx0, stdy0,'go')
 plt.subplot (2,2,3)
-plt.plot (Wx0, meanI0,'ro')
-plt.show()
+plt.plot (Wx0, correl0,'ro')
+plt.subplot (2,2,4)
+plt.plot (Wx0, norm0,'ro')
 
 
-ThresholdAve = np.mean(averImage0[len(averImage0)-10:len(averImage0)-1])
-ThresholdStd = np.sqrt(np.std(averImage0[len(averImage0)-10:len(averImage0)-1]))
+print np.shape(IMGf)
+
+histx, histy, x, y = imgtl.GetImageProjection(IMGt,cal)  
+x=x-x[np.argmax(histx)]
+y=y-y[np.argmax(histy)]
+
 plt.figure()
-#    threshold=np.linspace(0, 0.02, 11)
-threshold=ThresholdAve*(1.+4.*ThresholdStd*np.linspace(-1.,1., 11))
-print threshold
-for i in range(len(threshold)):
-   norm, meanx, meany, meanI, stdx, stdy, stdI, Wx, Wy, averImage = imgtl.window_scan2d(IMGt, 1., 100, threshold[i])
-   plt.subplot(2,2,1)
-   plt.plot (Wx, stdx,'o')
-   plt.plot (Wx, stdy,'o')
-   plt.subplot(2,2,2)
-   plt.plot (Wx, norm,'o')
-#       plt.plot (Wx, norm/sum(norm),'o')
-             
-print "ThreholdAve=", ThresholdAve 
-print "ThreholdStd=", ThresholdStd 
-print threshold
+subplot (2,2,1)
+plt.imshow(ndimage.gaussian_filter(IMGf, 5))
 
 plt.show()
+
 
 
