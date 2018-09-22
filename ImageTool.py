@@ -21,6 +21,7 @@ import scipy.optimize
 import math 
 import scipy.stats
 from scipy import ndimage
+from cosmetics import * 
 
 '''
   define a beam-density friendly color map 
@@ -37,16 +38,62 @@ def Load(filename):
      return(pyl.imread(filename))
 
 
+def LoadAWA(filename):
+     '''
+       load an image stored in filename are return as a numpy object
+       courtesy from N. Neuveu IIT/ANL
+       open the imageFilename from the matlab framegrabber
+       returns a 3D array with all the frames
+     '''
+     images  = np.fromfile(filename, dtype=np.uint16, count=-1,sep='')
+     # header info vert/horiz pixels and number of frames
+     dx      = int(images[0])
+     dy      = int(images[1])
+     Nframes = int(images[2])
+     hold    = images[6:] # skipping header info
+     #==========================================================
+     #Reading images into 3D array 
+     # X by Y by Frame Number
+     
+     print('---------LoadAWA()----------')
+     print('[dx,dy]=', dx, dy)
+     print("NFrames:", Nframes)
+     print('-----------------------------')
+     imagesArray = np.reshape(hold,(dx, dy, -1), order='F')
+
+     return(imagesArray, dx, dy, Nframes)    
+    
+
+def ImageCenter (MyImage):
+     '''
+       find the barycenter of an image byt copmuting the projection and looking at 
+       position averaged on the projections
+     '''    
+     indexHmax=np.argmax(np.sum(MyImage,1))
+     indexVmax=np.argmax(np.sum(MyImage,0))
+     return([indexHmax, indexVmax])
+    
 def AutoCrop(MyImage, hbbox):
      '''
        do a square (if possible) crop around the image center (defined as the area with 
        maximum intensity)
      '''    
-     indexHmax=np.argmax(np.sum(MyImage,1))
-     indexVmax=np.argmax(np.sum(MyImage,0))
-     print '---------AutoCrop()----------'
-     print indexXmax, indexYmax
-     print '-----------------------------'
+     indexVmax=np.argmax(np.sum(MyImage,1))
+     indexHmax=np.argmax(np.sum(MyImage,0))
+     print('---------AutoCrop()----------')
+     print(indexHmax, indexVmax)
+     print('-----------------------------')
+     return(Crop(MyImage, [indexHmax, indexVmax], [hbbox, hbbox]))
+     
+def MouseCrop(MyImage):
+     '''
+       displays image and wait for mouse action to select center, upper left and bottom right
+     '''    
+     indexVmax=np.argmax(np.sum(MyImage,1))
+     indexHmax=np.argmax(np.sum(MyImage,0))
+     print('---------MouseCrop()----------')
+     print(indexHmax, indexVmax)
+     print('-----------------------------')
      return(Crop(MyImage, [indexHmax, indexVmax], [hbbox, hbbox]))
      
 def RemoveEdge(MyImage, edgesize):
@@ -71,14 +118,14 @@ def Crop(MyImage, center, hbbox):
      maxy=min(center[0]+hbbox[0],shapec[0])
      
      if debug==1:
-        print '-------------Crop()----------'
-        print center
-        print hbbox
-	print minx
-	print maxx
-	print miny
-	print maxy
-        print '-----------------------------'
+        print('-------------Crop()----------')
+        print(center)
+        print(hbbox)
+        print(minx)
+        print(maxx)
+        print(miny)
+        print(maxy)
+        print('-----------------------------')
      
 #     return(MyImage[center[1]-hbbox[1]:center[1]+hbbox[1], \
 #                    center[0]-hbbox[0]:center[0]+hbbox[0]])
@@ -89,7 +136,7 @@ def DisplayImage(MyImage):
        do a crop around the image center (defined as the area with 
        maximum intensity)
      '''    
-     plt.imshow(MyImage, aspect='auto', cmap='spectral',origin='lower')
+     plt.imshow(MyImage, aspect='auto', cmap=beam_map,origin='lower')
      plt.colorbar()
      return()
      
@@ -145,7 +192,7 @@ def DisplayCalibrated(MyImage, cal):
 #     print ImShape
 #     print indexXmax, indexYmax
 #     print xmin, xmax, ymin, ymax
-     plt.imshow(MyImage, aspect='auto', cmap='spectral',origin='lower',extent=[xmin, xmax, ymin, ymax])
+     plt.imshow(MyImage, aspect='auto', cmap=beam_map,origin='lower',extent=[xmin, xmax, ymin, ymax])
      plt.colorbar()
  
  
@@ -157,7 +204,7 @@ def GetImageProjection(MyImage, cal):
      '''    
      
      if debug==1:
-        print 'GetImageProjection shape', np.shape(MyImage)
+        print('GetImageProjection shape', np.shape(MyImage))
      indexXmax=np.argmax(np.sum(MyImage,0))
      indexYmax=np.argmax(np.sum(MyImage,1))
      
@@ -183,7 +230,7 @@ def GetImageProjectionCal(MyImage, cal):
        cal is in um/pixel and assumed to be the same in both directions
      '''    
      
-     print 'GetImageProjection shape', np.shape(MyImage)
+     print('GetImageProjection shape', np.shape(MyImage))
      indexXmax=np.argmax(np.sum(MyImage,0))
      indexYmax=np.argmax(np.sum(MyImage,1))
      
@@ -210,7 +257,7 @@ def DisplayCalibratedProj(MyImage, cal, fudge):
        Display a picture with superimposed histogram of the image
      '''    
      
-     print 'image size:', np.shape(MyImage)
+     print('image size:', np.shape(MyImage))
      indexXmax=np.argmax(np.sum(MyImage,0))
      indexYmax=np.argmax(np.sum(MyImage,1))
      ImShape=np.shape(MyImage)
@@ -232,9 +279,9 @@ def DisplayCalibratedProj(MyImage, cal, fudge):
      
 #     print ImShape
 #     print indexXmax, indexYmax
-     print xmin, xmax, ymin, ymax
+     print(xmin, xmax, ymin, ymax)
 
-     plt.imshow(MyImage, aspect='auto', cmap='spectral',origin='lower',extent=[xmin, xmax, ymin, ymax])
+     plt.imshow(MyImage, aspect='auto', cmap=beam_map,origin='lower',extent=[xmin, xmax, ymin, ymax])
      plt.plot(xcoord,xhist,color='r',linewidth=3) 
      plt.plot(yhist, ycoord,color='r', linewidth=3) 
      plt.ylim(ymin, ymax)
@@ -246,7 +293,7 @@ def DisplayCalibratedProj(MyImage, cal, fudge):
 def Normalize(MyImage):
      '''
         Renormalize Image according to its maximum value
-     '''	
+     '''        
      maxv=np.amax(MyImage)
      MyImage=MyImage/maxv
      return(MyImage)
@@ -261,7 +308,7 @@ def MonteCarloXY(MyImage,N,cal):
        directions
      '''
      x,y = np.shape(MyImage)
-     print x,y
+     print(x,y)
      dist=np.zeros((N,2))
      i=0
      while i<N:
@@ -281,8 +328,8 @@ def MonteCarloXY(MyImage,N,cal):
      xrms=sqrt(mean(square(dist[:,0])))
      yrms=sqrt(mean(square(dist[:,1])))
 
-     print "RMS values:"
-     print xrms*1000.0, yrms*1000.0
+     print("RMS values:")
+     print(xrms*1000.0, yrms*1000.0)
 
      return(dist)
      
@@ -298,7 +345,7 @@ def FitProfile(projection, axiscoord):
      bkg = np.mean(xhist[0:10])
      Xmax = np.max(xhist)
      p0x  = [indexXmax,Xmax, 1.,bkg]
-     print Xmax, indexXmax, bkg
+     print(Xmax, indexXmax, bkg)
      ErrorFunc = lambda p0x,xaxis,xhist: dg(xaxis,p0x)-xhist
      p2,success = scipy.optimize.leastsq(ErrorFunc, p0x[:], args=(xaxis,xhist))
      
@@ -337,10 +384,10 @@ def stats1d(x, f):
     kurt = ((mu_4_r - 4.*mu_3_r*mean + 6.*mu_2_r*mean**2 - 3.*mean**4)
         / (var**2))
     if debug==1:
-       print 'mean:\t' + str(mean)
-       print 'std:\t' + str(std)
-       print 'skew:\t' + str(skew)
-       print 'kurt:\t' + str(kurt) + '\t(Fisher: ' + str(kurt-3.) + ')'
+       print('mean:\t' + str(mean))
+       print('std:\t' + str(std))
+       print('skew:\t' + str(skew))
+       print('kurt:\t' + str(kurt) + '\t(Fisher: ' + str(kurt-3.) + ')')
     
     return (mean, std, skew, kurt)
 
@@ -380,14 +427,14 @@ def stats2d(x, y, f):
     stdI    = mu_2_rI
     
     if debug==1:
-       print '--------stats2d()-----------------'
-       print 'norm   :\t' + str(norm)
-       print 'meanx  :\t' + str(meanx)
-       print 'stdx   :\t' + str(stdx)
-       print 'meany  :\t' + str(meany)
-       print 'stdy   :\t' + str(stdy)
-       print 'correl :\t' + str(correl)
-       print '----------------------------------'
+       print('--------stats2d()-----------------')
+       print('norm   :\t' + str(norm))
+       print('meanx  :\t' + str(meanx))
+       print('stdx   :\t' + str(stdx))
+       print('meany  :\t' + str(meany))
+       print('stdy   :\t' + str(stdy))
+       print('correl :\t' + str(correl))
+       print('----------------------------------')
 #    print 'skew:\t' + str(skew)
 #    print 'kurt:\t' + str(kurt) + '\t(Fisher: ' + str(kurt-3.) + ')'
     return (norm, meanx, meany, meanI, stdx, stdy, correl, stdI)
@@ -400,9 +447,9 @@ def window_scan2dthreshold (IMG, cal, Npts, threshold=0):
        of image intensity. This assumes one already took care of centering 
        the image (i.e. the peak intensity is in the center of the image)
        
-       IMG: 	the image to analyse
-       cal:    	the pixel to mm calibration coefficient
-       Npt:	number of windows
+       IMG:         the image to analyse
+       cal:            the pixel to mm calibration coefficient
+       Npt:        number of windows
     '''
 
     indexXmax=np.argmax(np.sum(IMG,1))
@@ -445,74 +492,74 @@ def window_scan2dthreshold (IMG, cal, Npts, threshold=0):
 #    for i in range(Npts):
     while (i<(Npts-5) and (epsilon>1.)):
         Cropped_Image=np.copy(IMG)
-	if auto==1:
-	   if i==0:
+        if auto==1:
+           if i==0:
               Wx[i] = wy 
               Wy[i] = wx 
 
-	   if i>0:
+           if i>0:
               Wy[i] = 4.*stdx[i-1]
               Wx[i] = Wy[i]*stdy[i-1]/stdx[i-1]
         
-	if auto==0:
-	   if i==0:
+        if auto==0:
+           if i==0:
               Wx[i] = wx 
               Wy[i] = wy 
 
-	   if i>0:
+           if i>0:
               Wy[i] = i*wx
               Wx[i] = i*wy
         
         histx, histy, x, y = GetImageProjection(Cropped_Image,cal)
         
-	if debug==1:
-           print "windowing ......"
+        if debug==1:
+           print("windowing ......")
 
         lx, ly = Cropped_Image.shape
-	X, Y = np.ogrid[0:lx, 0:ly]
-	mask  = (np.abs(indexXmax-X)>=round(Wx[i]))+(np.abs(indexYmax-Y)>=round(Wy[i]))
-	
-	Aver_Im [i] = np.mean(np.mean(Cropped_Image[mask]))
-		
-			
-	if threshold==0:
-	   if i==0:
-	      Cropped_Image = Cropped_Image-Aver_Im [i]
-	   if i>0:
-	      Cropped_Image = Cropped_Image-Aver_Im [i-1]
+        X, Y = np.ogrid[0:lx, 0:ly]
+        mask  = (np.abs(indexXmax-X)>=round(Wx[i]))+(np.abs(indexYmax-Y)>=round(Wy[i]))
+        
+        Aver_Im [i] = np.mean(np.mean(Cropped_Image[mask]))
+                
+                        
+        if threshold==0:
+           if i==0:
+              Cropped_Image = Cropped_Image-Aver_Im [i]
+           if i>0:
+              Cropped_Image = Cropped_Image-Aver_Im [i-1]
 
-	   Cropped_Image[mask]=0.0
+           Cropped_Image[mask]=0.0
 
 
         shapec=np.shape(Cropped_Image)
         minxc=max(round(indexXmax-Wx[i]),0)
-	maxxc=min(round(indexXmax+Wx[i]),shapec[0]-1)
+        maxxc=min(round(indexXmax+Wx[i]),shapec[0]-1)
         minyc=max(round(indexYmax-Wy[i]),0)
-	maxyc=min(round(indexYmax+Wy[i]),shapec[1]-1)
-	
+        maxyc=min(round(indexYmax+Wy[i]),shapec[1]-1)
         
-	if debug==1:
-	   print "shape and cropped area"
-	   print shapec
-	   print minxc
-	   print maxxc
-	   print minyc
-	   print maxyc
-	   print i
-	   print epsilon 
-	
-#	IMGf= Cropped_Image[round(indexXmax-Wx[i]):round(indexXmax+Wx[i]),round(indexYmax-Wy[i]):round(indexYmax+Wy[i])]
-#	IMGf= Cropped_Image[minxc:maxxc, minyc:maxyc]
+        
+        if debug==1:
+           print("shape and cropped area")
+           print(shapec)
+           print(minxc)
+           print(maxxc)
+           print(minyc)
+           print(maxyc)
+           print(i)
+           print(epsilon) 
+        
+#        IMGf= Cropped_Image[round(indexXmax-Wx[i]):round(indexXmax+Wx[i]),round(indexYmax-Wy[i]):round(indexYmax+Wy[i])]
+#        IMGf= Cropped_Image[minxc:maxxc, minyc:maxyc]
         IMGf= Crop(Cropped_Image, [indexYmax, indexXmax], [round(Wy[i]), round(Wx[i])])
-	norm[i], meanx[i], meany[i], meanI[i], stdx[i], stdy[i], correl[i], stdI[i] = stats2d (x, y, Cropped_Image)
+        norm[i], meanx[i], meany[i], meanI[i], stdx[i], stdy[i], correl[i], stdI[i] = stats2d (x, y, Cropped_Image)
 
         if auto==1:
-	   if i>0:
-	      epsilon = np.sqrt((stdx[i]-stdx[i-1])**2+(stdy[i]-stdy[i-1])**2)
-	      if debug==1:
-                 print "epsilon", epsilon
+           if i>0:
+              epsilon = np.sqrt((stdx[i]-stdx[i-1])**2+(stdy[i]-stdy[i-1])**2)
+              if debug==1:
+                 print("epsilon", epsilon)
         i=i+1
-	
+        
     return(norm[0:i-1], meanx[0:i-1], meany[0:i-1], meanI[0:i-1], stdx[0:i-1], stdy[0:i-1], stdI[0:i-1], correl[0:i-1], Wx[0:i-1], Wy[0:i-1], Aver_Im[0:i-1], IMGf)
     
     
@@ -539,7 +586,7 @@ def window_scan1d(x, histx, w_n):
     # Find location of max.
     x_max = np.argmax(histx)
     x_len = len(histx)
-    print x_max
+    print(x_max)
     # Initalize window analysis arrays.
     w_a    = np.zeros(w_n, dtype=int)
     w_b    = np.zeros(w_n, dtype=int)
@@ -549,7 +596,7 @@ def window_scan1d(x, histx, w_n):
     w_kurt = np.zeros(w_n, dtype=float)
 
     # Window after max.
-    print '\nwindowing after max:'
+    print('\nwindowing after max:')
     #print 'i\tw_a[i]\tw_b[i]\tw_mean[i]\tw_std[i]\tw_skew[i]\tw_kurt[i]'
     w_check = False # Controls whether or not to check for end of signal.
     sig_stop = x_len
@@ -561,18 +608,18 @@ def window_scan1d(x, histx, w_n):
         w_skew[i] = scipy.stats.skew(histx[w_a[i]:w_b[i]], bias=False)
         w_skew[i] = scipy.stats.kurtosis(histx[w_a[i]:w_b[i]], fisher=False,
             bias=False)
-        print (str(i) + '\t' + str(w_a[i]) + '\t' + str(w_b[i]) + '\t'
+        print((str(i) + '\t' + str(w_a[i]) + '\t' + str(w_b[i]) + '\t'
             + str(w_mean[i]) + '\t' + str(w_std[i]) + '\t' + str(w_skew[i]) + '\t'
-            + str(w_kurt[i]))
+            + str(w_kurt[i])))
         if (w_check and (w_std[i] <= w_t) and (w_std[i-1] <= w_t)):
             sig_stop = w_a[i]
-            print 'sig_stop:\t' + str(sig_stop)
+            print('sig_stop:\t' + str(sig_stop))
             w_check = False
         if (i == 1):
             w_check = True
 
     # Window before max.
-    print '\nwindowing before max:'
+    print('\nwindowing before max:')
     #print 'i\tw_a[i]\tw_b[i]\tw_mean[i]\tw_std[i]\tw_skew[i]\tw_kurt[i]'
     w_check = False # Controls whether or not to check for end of signal.
     sig_start = 0
@@ -589,7 +636,7 @@ def window_scan1d(x, histx, w_n):
         #    + str(w_kurt[i]))
         if (w_check and (w_std[i] <= w_t) and (w_std[i-1] <= w_t)):
             sig_start = w_a[i] + 1
-            print 'sig_start:\t' + str(sig_start)
+            print('sig_start:\t' + str(sig_start))
             w_check = False
         if (i == 1):
             w_check = True
@@ -602,7 +649,7 @@ def window_scan1d(x, histx, w_n):
     ========================================================================
     '''
 
-    print '\ntruncated dataset statistics:'
+    print('\ntruncated dataset statistics:')
     trnk_mean, trnk_std, z_dum1, z_dum2 = stats1d(x[sig_start:sig_stop], histx[sig_start:sig_stop])
 
     '''
@@ -612,7 +659,7 @@ def window_scan1d(x, histx, w_n):
     ========================================================================
     '''
 
-    print '\nbackground level statistics:'
+    print('\nbackground level statistics:')
 
     A1 = 0.
     Q = 0.
@@ -630,13 +677,13 @@ def window_scan1d(x, histx, w_n):
     bkg_mean = A1
     bkg_std = np.sqrt(Q / (k-1.))
 
-    print 'mean:\t' + str(bkg_mean)
-    print 'std:\t' + str(bkg_std)
+    print('mean:\t' + str(bkg_mean))
+    print('std:\t' + str(bkg_std))
 
     # Zero mean background level.
     histx_z = histx - bkg_mean
 
-    print '\ntruncated dataset (with background reduction) statistics:'
+    print('\ntruncated dataset (with background reduction) statistics:')
     z_mean, z_std, z_dum1, z_dum2 = stats1d(x[sig_start:sig_stop], histx_z[sig_start:sig_stop])
 
     #print '\nfull dataset (with background reduction) statistics:'
@@ -665,7 +712,7 @@ def window_scan1d_ORIGINAL_OBSOLETE_(x, histx, w_n):
     # Find location of max.
     x_max = np.argmax(histx)
     x_len = len(histx)
-    print x_max
+    print(x_max)
     # Initalize window analysis arrays.
     w_a    = np.zeros(w_n, dtype=int)
     w_b    = np.zeros(w_n, dtype=int)
@@ -675,8 +722,8 @@ def window_scan1d_ORIGINAL_OBSOLETE_(x, histx, w_n):
     w_kurt = np.zeros(w_n, dtype=float)
 
     # Window after max.
-    print '\nwindowing after max:'
-    print 'i\tw_a[i]\tw_b[i]\tw_mean[i]\tw_std[i]\tw_skew[i]\tw_kurt[i]'
+    print('\nwindowing after max:')
+    print('i\tw_a[i]\tw_b[i]\tw_mean[i]\tw_std[i]\tw_skew[i]\tw_kurt[i]')
     w_check = False # Controls whether or not to check for end of signal.
     sig_stop = x_len
     for i in range(w_n):
@@ -687,18 +734,18 @@ def window_scan1d_ORIGINAL_OBSOLETE_(x, histx, w_n):
         w_skew[i] = scipy.stats.skew(histx[w_a[i]:w_b[i]], bias=False)
         w_skew[i] = scipy.stats.kurtosis(histx[w_a[i]:w_b[i]], fisher=False,
             bias=False)
-        print (str(i) + '\t' + str(w_a[i]) + '\t' + str(w_b[i]) + '\t'
+        print((str(i) + '\t' + str(w_a[i]) + '\t' + str(w_b[i]) + '\t'
             + str(w_mean[i]) + '\t' + str(w_std[i]) + '\t' + str(w_skew[i]) + '\t'
-            + str(w_kurt[i]))
+            + str(w_kurt[i])))
         if (w_check and (w_std[i] <= w_t) and (w_std[i-1] <= w_t)):
             sig_stop = w_a[i]
-            print 'sig_stop:\t' + str(sig_stop)
+            print('sig_stop:\t' + str(sig_stop))
             w_check = False
         if (i == 1):
             w_check = True
 
     # Window before max.
-    print '\nwindowing before max:'
+    print('\nwindowing before max:')
     #print 'i\tw_a[i]\tw_b[i]\tw_mean[i]\tw_std[i]\tw_skew[i]\tw_kurt[i]'
     w_check = False # Controls whether or not to check for end of signal.
     sig_start = 0
@@ -715,7 +762,7 @@ def window_scan1d_ORIGINAL_OBSOLETE_(x, histx, w_n):
         #    + str(w_kurt[i]))
         if (w_check and (w_std[i] <= w_t) and (w_std[i-1] <= w_t)):
             sig_start = w_a[i] + 1
-            print 'sig_start:\t' + str(sig_start)
+            print('sig_start:\t' + str(sig_start))
             w_check = False
         if (i == 1):
             w_check = True
@@ -728,7 +775,7 @@ def window_scan1d_ORIGINAL_OBSOLETE_(x, histx, w_n):
     ========================================================================
     '''
 
-    print '\ntruncated dataset statistics:'
+    print('\ntruncated dataset statistics:')
     trnk_mean, trnk_std, z_dum1, z_dum2 = stats1d(x[sig_start:sig_stop], histx[sig_start:sig_stop])
 
     '''
@@ -738,7 +785,7 @@ def window_scan1d_ORIGINAL_OBSOLETE_(x, histx, w_n):
     ========================================================================
     '''
 
-    print '\nbackground level statistics:'
+    print('\nbackground level statistics:')
 
     A1 = 0.
     Q = 0.
@@ -756,14 +803,15 @@ def window_scan1d_ORIGINAL_OBSOLETE_(x, histx, w_n):
     bkg_mean = A1
     bkg_std = np.sqrt(Q / (k-1.))
 
-    print 'mean:\t' + str(bkg_mean)
-    print 'std:\t' + str(bkg_std)
+    print('mean:\t' + str(bkg_mean))
+    print('std:\t' + str(bkg_std))
 
     # Zero mean background level.
     histx_z = histx - bkg_mean
 
-    print '\ntruncated dataset (with background reduction) statistics:'
+    print('\ntruncated dataset (with background reduction) statistics:')
     z_mean, z_std, z_dum1, z_dum2 = stats1d(x[sig_start:sig_stop], histx_z[sig_start:sig_stop])
 
     #print '\nfull dataset (with background reduction) statistics:'
     #stats(x[:], histx_z[:], x_len)
+

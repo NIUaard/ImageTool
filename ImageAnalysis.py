@@ -128,7 +128,7 @@ plt.subplot (2,2,4)
 plt.plot (Wx0, norm0,'ro')
 
 
-print np.shape(IMGf)
+print(np.shape(IMGf))
 
 histx, histy, x, y = imgtl.GetImageProjection(IMGt,cal)  
 x=x-x[np.argmax(histx)]

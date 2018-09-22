@@ -52,8 +52,8 @@ for i in range (NPoints):
     p2X= imgtl.FitProfile(histXc, axisXc)
     p2Y= imgtl.FitProfile(histYc, axisYc)
     
-    print "fitX: ", p2X
-    print "fitY: ", p2Y
+    print("fitX: ", p2X)
+    print("fitY: ", p2Y)
 
     plt.figure()
     plt.plot(axisXc, histXc,'ob',alpha=0.1)

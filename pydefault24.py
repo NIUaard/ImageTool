@@ -32,7 +32,6 @@ rc('text',fontsize=24)
 rc('legend',fontsize=24)
 rc('xtick',labelsize=24)
 rc('ytick',labelsize=24)
-rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
 rc('text', usetex=True)
 
 default_params = dict(nbins = 10,

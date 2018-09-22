@@ -28,12 +28,14 @@ params = {'axes.labelsize': 18,
           'ytick.labelsize': 18,
           'text.usetex':True}
           
-rc('text',fontsize=18)
-rc('legend',fontsize=18)
+#rc('text',fontsize=18)
+#rc('legend',fontsize=18)
 rc('xtick',labelsize=18)
 rc('ytick',labelsize=18)
-rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
+rc('font', **{'family': 'serif'})
 rc('text', usetex=True)
+rc('font', size = 18)
+
 
 default_params = dict(nbins = 10,
                       steps = None,

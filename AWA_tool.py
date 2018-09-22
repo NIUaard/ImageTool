@@ -8,7 +8,9 @@ import numpy as np
 import matplotlib.pyplot as plt 
 
 
-
+#
+# obsolete should not be imported anymore -- will be removed in future versions. 
+#
 def fread_m(fid, nelements, dtype):
 
      if dtype is np.str:
@@ -32,12 +34,12 @@ def ReadFrameGrabberDat(imageFilename):
      ImSize=fread_m(fid, 2, np.int16)
      Dx=int(ImSize[0])
      Dy=int(ImSize[1])
-     print 'imagesize=',Dx, Dy
+     print('imagesize=',Dx, Dy)
 
      NFrame=fread_m(fid, 1, np.int32)
-     print 'number of frames=',int(NFrame)
+     print('number of frames=',int(NFrame))
 
-     Frame=np.zeros((Dy,Dx,NFrame))
+     Frame=np.zeros((Dy,Dx,int(NFrame)))
 
      for i in range(NFrame):
          Offset=i*Dx*Dy+2*2+4;

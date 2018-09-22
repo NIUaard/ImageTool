@@ -83,7 +83,7 @@ plt.subplot(2,2,1)
 imgtl.DisplayImage(IMG)
 plt.title('raw data::'+FilenameBeam,fontsize=FTsize)
 plt.axis('off')
-print 'size raw:', np.shape(IMG)
+print('size raw:', np.shape(IMG))
 # crop image 
 #    plt.figure()
 plt.subplot(2,2,2)
@@ -91,7 +91,7 @@ plt.subplot(2,2,2)
 #TODOFIX 
 # IMGc=imgtl.AutoCrop(IMG, bbox)
 IMGc=imgtl.RemoveEdge(IMG, 100)
-print 'size removed:', np.shape(IMGc)
+print('size removed:', np.shape(IMGc))
 imgtl.DisplayCalibratedProj(IMGc, cal, fudge)
 plt.title('cropped'+FilenameBeam,fontsize=FTsize)
 plt.axis('off')
@@ -137,7 +137,7 @@ plt.subplot (2,2,4)
 plt.plot (Wx0, norm0,'ro')
 
 
-print np.shape(IMGf)
+print(np.shape(IMGf))
 
 histx, histy, x, y = imgtl.GetImageProjection(IMGf,cal)  
 
@@ -146,10 +146,10 @@ y=y-y[np.argmax(histy)]
 p2X= imgtl.FitProfile(histx, x)
 p2Y= imgtl.FitProfile(histy, y)
 
-print 'RMS_x=',np.mean(stdx0[len(stdx0)-2:len(stdx0)+2])
-print 'RMS_y=',np.mean(stdy0[len(stdy0)-2:len(stdy0)+2])
-print "fitX: ", p2X
-print "fitY: ", p2Y
+print('RMS_x=',np.mean(stdx0[len(stdx0)-2:len(stdx0)+2]))
+print('RMS_y=',np.mean(stdy0[len(stdy0)-2:len(stdy0)+2]))
+print("fitX: ", p2X)
+print("fitY: ", p2Y)
 
 plt.figure()
 plt.subplot (2,2,1)
