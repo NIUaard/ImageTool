@@ -14,6 +14,7 @@ import scipy.optimize
 import math 
 import matplotlib.pyplot as plt
 import ImageTool as imgtl
+from cosmetics import *
 from scipy import ndimage
 
 # you have to change this line to the directory where the data are located in
@@ -135,8 +136,8 @@ x=x-x[np.argmax(histx)]
 y=y-y[np.argmax(histy)]
 
 plt.figure()
-subplot (2,2,1)
-plt.imshow(ndimage.gaussian_filter(IMGf, 5))
+plt.subplot (2,2,1)
+plt.imshow(ndimage.gaussian_filter(IMGf, 5), cmap=beam_map)
 
 plt.show()
 

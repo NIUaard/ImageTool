@@ -15,6 +15,7 @@ import math
 import matplotlib.pyplot as plt
 import ImageTool as imgtl
 from scipy import ndimage
+from cosmetics import *
 
 # you have to change this line to the directory where the data are located in
 FileDir = "./data_samples/"
@@ -26,55 +27,26 @@ rootname = "0"
 FilenameBkgd  ="X101_bkg_0.png"
 FilenameBeam  ="X101_img_0.png"
 
-#FilenameBkgd  ="VC110bunches_bkg_0.png"
-#FilenameBeam  ="VC110bunches_img_0.png"
-
-
-
-#nml-2015-06-01-2205-23-13076.png"
-
 
 FTsize=8
 
 test = 0  
 # parameters
-bbox = 200
-cal  = 1
-fudge = 0.3
-threshold = 0.
-# scan over the number of data point
+bbox = 200   # bounding box 
+cal  = 0.05  # calibration 
+fudge = 0.3  #
+threshold = 0. # threshold (remove anything below this minimum pixel)
 
-#    fileonly = rootname+"-"+str(1+i)+".png"
-#    filename = UpperDir+"/"+SubDir+"/"+fileonly
 filenameBeam=FileDir+FilenameBeam
 filenameBkgd=FileDir+FilenameBkgd
     
 # load the image 
 
-if test==0: 
-   IMGbeam=imgtl.Load(filenameBeam)
-   IMGbkgd=imgtl.Load(filenameBkgd)
-   IMG=1.*IMGbeam-IMGbkgd
+IMGbeam=imgtl.Load(filenameBeam)
+IMGbkgd=imgtl.Load(filenameBkgd)
+IMG=1.*IMGbeam-IMGbkgd
 #   IMG=ndimage.gaussian_filter(IMGT, 2) 
 #   ndimage.gaussian_filter(IMGT, sigma=3)
-if test==1:
-# this makes a test image 
-# a gaussian curve
-#       IMG = 10.+np.random.rand((1296,1606))
-   IMGT = np.zeros((1296,1606))
-   BKGD = np.zeros((1296,1606))
-   IMG  = np.zeros((1296,1606))
-   s   = np.shape(IMG)
-
-   v   = np.linspace(0, s[0], s[0])
-   h   = np.linspace(0, s[1], s[1])
-   sh  = 50.
-   sv  = 75.
-   alpha=-0.0
-   for i in range(s[1]):
-      BKGD[:,i]= 0.0+0.1*(1.0-np.random.rand(s[0]))
-      IMGT[:,i]= 0.0+0.1*(1.0-np.random.rand(s[0]))+np.exp (- (v-np.mean(v)-alpha*(h[i]-np.mean(h)))**2/(2.*sv**2))*np.exp (- (h[i]-np.mean(h))**2/(2.*sh**2))
-      IMG=IMGT-BKGD
    
    
 # display raw image    
@@ -87,9 +59,6 @@ print('size raw:', np.shape(IMG))
 # crop image 
 #    plt.figure()
 plt.subplot(2,2,2)
-# need to fix autocrop not to see image
-#TODOFIX 
-# IMGc=imgtl.AutoCrop(IMG, bbox)
 IMGc=imgtl.RemoveEdge(IMG, 100)
 print('size removed:', np.shape(IMGc))
 imgtl.DisplayCalibratedProj(IMGc, cal, fudge)
@@ -121,9 +90,9 @@ imgtl.stats1d(x, histx)
 imgtl.stats1d(y, histy)
 imgtl.stats2d(x,y,IMGt)
 
-
+# copmute statistics using old algorithm 
 norm0, meanx0, meany0, meanI0, stdx0, stdy0, stdI0, correl0, Wx0, Wy0, averImage0, IMGf = \
-                 imgtl.window_scan2dthreshold(IMGt, 1., 50, 0.00)
+                 imgtl.window_scan2dthreshold(IMGt, cal, 50, 0.00)
 
 plt.figure()
 plt.subplot (2,2,1)
@@ -153,8 +122,8 @@ print("fitY: ", p2Y)
 
 plt.figure()
 plt.subplot (2,2,1)
-plt.imshow(ndimage.gaussian_filter(IMGf, 10), extent=[min(x), max(x), min(y), max(y)], \
-          aspect='auto', origin='lower',  cmap='spectral')
+plt.imshow(ndimage.gaussian_filter(IMGf, 5), extent=[min(x), max(x), min(y), max(y)], \
+          aspect='auto', origin='lower',  cmap=beam_map)
 plt.subplot (2,2,3)
 plt.plot (x, histx)
 plt.plot (x, imgtl.dg(x,p2X),'--',linewidth=3)
@@ -185,7 +154,7 @@ plt.text (2,4,'Gaussian fit')
 plt.text (0.5,3,text4)
 plt.text (0.5,2,text5)
 
-plt.text (0.5,1,'units are pixels')
+plt.text (0.5,0.1,'units given by calibration coeff.', color='red')
 
 
 plt.axis('off')

@@ -22,6 +22,12 @@ import math
 import scipy.stats
 from scipy import ndimage
 from cosmetics import * 
+from scipy import ndimage
+from skimage import feature 
+from skimage import measure
+
+#from skimage.filters import sobel
+
 
 '''
   define a beam-density friendly color map 
@@ -29,7 +35,7 @@ from cosmetics import *
 
 global debug
 
-debug=0
+debug=1
 
 def Load(filename):
      '''
@@ -69,13 +75,15 @@ def ImageCenter (MyImage):
        find the barycenter of an image byt copmuting the projection and looking at 
        position averaged on the projections
      '''    
+     MyImage=ndimage.gaussian_filter(MyImage, 12)  # smooth the image for max calc only
      indexHmax=np.argmax(np.sum(MyImage,1))
      indexVmax=np.argmax(np.sum(MyImage,0))
      return([indexHmax, indexVmax])
     
+    
 def AutoCrop(MyImage, hbbox):
      '''
-       do a square (if possible) crop around the image center (defined as the area with 
+       do a square crop (if possible) around the image center (defined as the area with 
        maximum intensity)
      '''    
      indexVmax=np.argmax(np.sum(MyImage,1))
@@ -85,16 +93,39 @@ def AutoCrop(MyImage, hbbox):
      print('-----------------------------')
      return(Crop(MyImage, [indexHmax, indexVmax], [hbbox, hbbox]))
      
+     
 def MouseCrop(MyImage):
      '''
        displays image and wait for mouse action to select center, upper left and bottom right
      '''    
-     indexVmax=np.argmax(np.sum(MyImage,1))
-     indexHmax=np.argmax(np.sum(MyImage,0))
-     print('---------MouseCrop()----------')
-     print(indexHmax, indexVmax)
-     print('-----------------------------')
-     return(Crop(MyImage, [indexHmax, indexVmax], [hbbox, hbbox]))
+     # template TODO
+     return()
+
+
+def CannyCrop(MyImage):  # !!!!!! NOT WORKING !!!!!!
+     '''
+       displays image and wait for mouse action to select center, upper left and bottom right
+     '''    
+     SmoothImg=ndimage.gaussian_filter(MyImage, 1)
+     
+#     contours = measure.find_contours(r, 0.500)
+     
+     edges = feature.canny(MyImage)     
+     pts = np.argwhere(edges>0)
+#     y1,x1 = pts.min(axis=0)
+#     y2,x2 = pts.max(axis=0)
+#     Img = MyImage[y1:y2, x1:x2]
+     Img=MyImage
+     return(Img, edges)
+
+
+def DesInterlace(MyImage):
+     '''
+       remove intelacing problem on AWA analog camera
+       do this using a simple Gaussian filter
+     '''
+     return(ndimage.gaussian_filter(MyImage, 1))
+     
      
 def RemoveEdge(MyImage, edgesize):
      '''
@@ -129,7 +160,8 @@ def Crop(MyImage, center, hbbox):
      
 #     return(MyImage[center[1]-hbbox[1]:center[1]+hbbox[1], \
 #                    center[0]-hbbox[0]:center[0]+hbbox[0]])
-     return(MyImage[minx:maxx,miny:maxy])
+     return(MyImage[int(minx):int(maxx),int(miny):int(maxy)])
+     
      
 def DisplayImage(MyImage):
      '''
@@ -158,8 +190,7 @@ def center_and_ROI(projection, axiscoord, window):
      MaxLoc = np.argmax(projection)
      Hist   = projection[MaxLoc-round(window/2.):MaxLoc+round(window/2.)]
      Coord  = axiscoord [MaxLoc-round(window/2.):MaxLoc+round(window/2.)]-axiscoord[MaxLoc]
-     return(Hist, Coord)
-  
+     return(Hist, Coord)  
   
 
 def removebackground(projection, axiscoord, window):
@@ -170,7 +201,6 @@ def removebackground(projection, axiscoord, window):
      Bkgrd = np.mean(projection[0:window])
      Hist  = projection-Bkgrd*np.ones((len(projection)))
      return(Hist, axiscoord)
-    
        
        
 def DisplayCalibrated(MyImage, cal):
@@ -196,7 +226,6 @@ def DisplayCalibrated(MyImage, cal):
      plt.colorbar()
  
  
- 
 def GetImageProjection(MyImage, cal):
      '''
        Return the horizontal and vertical projection
@@ -217,8 +246,8 @@ def GetImageProjection(MyImage, cal):
      xhist = np.sum(MyImage,0)
      yhist = np.sum(MyImage,1)
 
-     xcoord = np.linspace(0,len(xhist),len(xhist))
-     ycoord = np.linspace(0,len(yhist),len(yhist))
+     xcoord = np.linspace(0,len(xhist),len(xhist))*calx
+     ycoord = np.linspace(0,len(yhist),len(yhist))*caly
 
      return(xhist,yhist,xcoord,ycoord)
      
@@ -447,8 +476,8 @@ def window_scan2dthreshold (IMG, cal, Npts, threshold=0):
        of image intensity. This assumes one already took care of centering 
        the image (i.e. the peak intensity is in the center of the image)
        
-       IMG:         the image to analyse
-       cal:            the pixel to mm calibration coefficient
+       IMG:        the image to analyse
+       cal:        the pixel to mm calibration coefficient
        Npt:        number of windows
     '''
 
@@ -510,7 +539,7 @@ def window_scan2dthreshold (IMG, cal, Npts, threshold=0):
               Wy[i] = i*wx
               Wx[i] = i*wy
         
-        histx, histy, x, y = GetImageProjection(Cropped_Image,cal)
+        histx, histy, x, y = GetImageProjection(Cropped_Image,1.)  # using pixel (force cal=1) within loop
         
         if debug==1:
            print("windowing ......")
@@ -551,6 +580,7 @@ def window_scan2dthreshold (IMG, cal, Npts, threshold=0):
 #        IMGf= Cropped_Image[round(indexXmax-Wx[i]):round(indexXmax+Wx[i]),round(indexYmax-Wy[i]):round(indexYmax+Wy[i])]
 #        IMGf= Cropped_Image[minxc:maxxc, minyc:maxyc]
         IMGf= Crop(Cropped_Image, [indexYmax, indexXmax], [round(Wy[i]), round(Wx[i])])
+	# use calibrated x,y when getting the startistics
         norm[i], meanx[i], meany[i], meanI[i], stdx[i], stdy[i], correl[i], stdI[i] = stats2d (x, y, Cropped_Image)
 
         if auto==1:
@@ -560,7 +590,8 @@ def window_scan2dthreshold (IMG, cal, Npts, threshold=0):
                  print("epsilon", epsilon)
         i=i+1
         
-    return(norm[0:i-1], meanx[0:i-1], meany[0:i-1], meanI[0:i-1], stdx[0:i-1], stdy[0:i-1], stdI[0:i-1], correl[0:i-1], Wx[0:i-1], Wy[0:i-1], Aver_Im[0:i-1], IMGf)
+    return(norm[0:i-1], cal*meanx[0:i-1], cal*meany[0:i-1], meanI[0:i-1], cal*stdx[0:i-1], \
+           cal*stdy[0:i-1], stdI[0:i-1], correl[0:i-1], Wx[0:i-1], Wy[0:i-1], Aver_Im[0:i-1], IMGf)
     
     
     
@@ -689,129 +720,4 @@ def window_scan1d(x, histx, w_n):
     #print '\nfull dataset (with background reduction) statistics:'
     #stats(x[:], histx_z[:], x_len)
 
-
-def window_scan1d_ORIGINAL_OBSOLETE_(x, histx, w_n):
-    ''' 
-       define moments of x associated to f(x)
-       modified (vectorized + simplified) from Kyle's 
-       PP. DO NOT UNDERSTAND SEEMS TO BE A BAD IMPLEMENTATION
-    ''' 
-
-    # Background threshold.
-    w_t = 0.5
-
-    # Window dimensions:
-    #   Window offset.
-    w_off = 20
-    #   Window overlap.
-    w_lap = 10
-    #   Window length.
-    w_len = w_off + w_lap
-    
-
-    # Find location of max.
-    x_max = np.argmax(histx)
-    x_len = len(histx)
-    print(x_max)
-    # Initalize window analysis arrays.
-    w_a    = np.zeros(w_n, dtype=int)
-    w_b    = np.zeros(w_n, dtype=int)
-    w_mean = np.zeros(w_n, dtype=float)
-    w_std  = np.zeros(w_n, dtype=float)
-    w_skew = np.zeros(w_n, dtype=float)
-    w_kurt = np.zeros(w_n, dtype=float)
-
-    # Window after max.
-    print('\nwindowing after max:')
-    print('i\tw_a[i]\tw_b[i]\tw_mean[i]\tw_std[i]\tw_skew[i]\tw_kurt[i]')
-    w_check = False # Controls whether or not to check for end of signal.
-    sig_stop = x_len
-    for i in range(w_n):
-        w_a[i] = x_max + i*w_off
-        w_b[i] = w_a[i] + w_len
-        w_mean[i] = np.mean(histx[w_a[i]:w_b[i]])
-        w_std[i] = np.std(histx[w_a[i]:w_b[i]], ddof=1)
-        w_skew[i] = scipy.stats.skew(histx[w_a[i]:w_b[i]], bias=False)
-        w_skew[i] = scipy.stats.kurtosis(histx[w_a[i]:w_b[i]], fisher=False,
-            bias=False)
-        print((str(i) + '\t' + str(w_a[i]) + '\t' + str(w_b[i]) + '\t'
-            + str(w_mean[i]) + '\t' + str(w_std[i]) + '\t' + str(w_skew[i]) + '\t'
-            + str(w_kurt[i])))
-        if (w_check and (w_std[i] <= w_t) and (w_std[i-1] <= w_t)):
-            sig_stop = w_a[i]
-            print('sig_stop:\t' + str(sig_stop))
-            w_check = False
-        if (i == 1):
-            w_check = True
-
-    # Window before max.
-    print('\nwindowing before max:')
-    #print 'i\tw_a[i]\tw_b[i]\tw_mean[i]\tw_std[i]\tw_skew[i]\tw_kurt[i]'
-    w_check = False # Controls whether or not to check for end of signal.
-    sig_start = 0
-    for i in range(w_n):
-        w_a[i] = x_max - i*w_off
-        w_b[i] = w_a[i] - w_len
-        w_mean[i] = np.mean(histx[w_b[i]:w_a[i]])
-        w_std[i] = np.std(histx[w_b[i]:w_a[i]], ddof=1)
-        w_skew[i] = scipy.stats.skew(histx[w_b[i]:w_a[i]], bias=False)
-        w_skew[i] = scipy.stats.kurtosis(histx[w_b[i]:w_a[i]], fisher=False,
-            bias=False)
-        #print (str(i) + '\t' + str(w_a[i]) + '\t' + str(w_b[i]) + '\t'
-        #    + str(w_mean[i]) + '\t' + str(w_std[i]) + '\t' + str(w_skew[i]) + '\t'
-        #    + str(w_kurt[i]))
-        if (w_check and (w_std[i] <= w_t) and (w_std[i-1] <= w_t)):
-            sig_start = w_a[i] + 1
-            print('sig_start:\t' + str(sig_start))
-            w_check = False
-        if (i == 1):
-            w_check = True
-
-    sig_len = sig_stop - sig_start
-
-    '''
-    ========================================================================
-    Calculate statistics on truncated region.
-    ========================================================================
-    '''
-
-    print('\ntruncated dataset statistics:')
-    trnk_mean, trnk_std, z_dum1, z_dum2 = stats1d(x[sig_start:sig_stop], histx[sig_start:sig_stop])
-
-    '''
-    ========================================================================
-    Calculate and zero the mean background level. Then attampt statistical
-    calculations on signal region.
-    ========================================================================
-    '''
-
-    print('\nbackground level statistics:')
-
-    A1 = 0.
-    Q = 0.
-    k = 0.
-    for i in range(0, sig_start):
-        k += 1.
-        A2 = A1
-        A1 += (histx[i] - A2) / k
-        Q += (histx[i] - A2)*(histx[i] - A1)
-    for i in range(sig_stop, x_len):
-        k += 1.
-        A2 = A1
-        A1 += (histx[i] - A2) / k
-        Q += (histx[i] - A2)*(histx[i] - A1)
-    bkg_mean = A1
-    bkg_std = np.sqrt(Q / (k-1.))
-
-    print('mean:\t' + str(bkg_mean))
-    print('std:\t' + str(bkg_std))
-
-    # Zero mean background level.
-    histx_z = histx - bkg_mean
-
-    print('\ntruncated dataset (with background reduction) statistics:')
-    z_mean, z_std, z_dum1, z_dum2 = stats1d(x[sig_start:sig_stop], histx_z[sig_start:sig_stop])
-
-    #print '\nfull dataset (with background reduction) statistics:'
-    #stats(x[:], histx_z[:], x_len)
 
