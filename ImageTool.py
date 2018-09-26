@@ -25,6 +25,7 @@ from cosmetics import *
 from scipy import ndimage
 from skimage import feature 
 from skimage import measure
+from matplotlib.widgets import RectangleSelector
 
 #from skimage.filters import sobel
 
@@ -95,11 +96,47 @@ def AutoCrop(MyImage, hbbox):
      
      
 def MouseCrop(MyImage):
-     '''
-       displays image and wait for mouse action to select center, upper left and bottom right
-     '''    
-     # template TODO
-     return()
+    '''
+      displays image and wait for mouse action to select a rectangular area
+      press q to save and exit
+    '''  
+    img_cropped = MyImage.copy()
+    fig, ax = plt.subplots()
+    # No other parameters for imshow. What you see is what you get.
+    im = ax.imshow(MyImage)
+    fig.colorbar(im)
+    
+    def onselect(eclick, erelease):
+        "eclick and erelease are matplotlib events at press and release."
+        print('startposition: (%f, %f)' % (eclick.xdata, eclick.ydata))
+        print('endposition  : (%f, %f)' % (erelease.xdata, erelease.ydata))
+        print('used button  : ', eclick.button)
+        minx = int(np.floor(eclick.xdata))
+        miny = int(np.floor(eclick.ydata))
+        maxx = int(np.ceil(erelease.xdata))
+        maxy = int(np.ceil(erelease.ydata))
+        
+        nonlocal img_cropped
+        img_cropped = MyImage[miny:maxy, minx:maxx] # switch x and y because numpy is row major
+        print('cropped size : ', np.shape(img_cropped))
+        
+    
+    def toggle_selector(event):
+        print('Key pressed.')
+        if event.key in ['Q', 'q'] and toggle_selector.RS.active:
+            print('RectangleSelector deactivated.')
+            toggle_selector.RS.set_active(False)
+        if event.key in ['A', 'a'] and not toggle_selector.RS.active:
+            print('RectangleSelector activated.')
+            toggle_selector.RS.set_active(True)
+            
+    toggle_selector.RS = RectangleSelector(ax, onselect, drawtype='box', interactive=True)
+    fig.canvas.mpl_connect('key_press_event', toggle_selector)
+    print('---------MouseCrop()----------')
+    plt.show()
+    print('-------------Done-------------')
+    return img_cropped
+
 
 
 def CannyCrop(MyImage):  # !!!!!! NOT WORKING !!!!!!
