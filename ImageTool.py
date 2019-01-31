@@ -240,13 +240,21 @@ def removebackground(projection, axiscoord, window):
      return(Hist, axiscoord)
        
        
-def DisplayCalibrated(MyImage, cal):
+def DisplayCalibrated(MyImage, cal, center=None):
      '''
        Display image with calibrated axis
        cal is in um/pixel and assumed to be the same in both directions
+       center is a flag that enable to recenter the 0 on the image barycenter
      '''    
-     indexXmax=np.argmax(np.sum(MyImage,0))
-     indexYmax=np.argmax(np.sum(MyImage,1))
+     print (center)
+     if (center==None):
+        indexXmax=np.argmax(np.sum(MyImage,0))
+        indexYmax=np.argmax(np.sum(MyImage,1))
+     else:
+         px, py, xx, yy = GetImageProjection(MyImage, 1)
+         indexXmax=np.sum(px*xx)/np.sum(px)
+         indexYmax=np.sum(py*yy)/np.sum(py)
+	 
      ImShape=np.shape(MyImage)
      calx=cal
      caly=cal
@@ -255,12 +263,13 @@ def DisplayCalibrated(MyImage, cal):
      xmax=calx*(ImShape[0]-indexXmax)
      ymin=caly*(0.-indexYmax)
      ymax=caly*(ImShape[1]-indexYmax)
+              
      
 #     print ImShape
 #     print indexXmax, indexYmax
 #     print xmin, xmax, ymin, ymax
      plt.imshow(MyImage, aspect='auto', cmap=beam_map,origin='lower',extent=[xmin, xmax, ymin, ymax])
-     plt.colorbar()
+#     plt.colorbar()
  
  
 def GetImageProjection(MyImage, cal):
@@ -318,14 +327,20 @@ def GetImageProjectionCal(MyImage, cal):
 
      return(xhist,yhist,xcoord,ycoord)
      
-def DisplayCalibratedProj(MyImage, cal, fudge):
+def DisplayCalibratedProj(MyImage, cal, fudge, center=None):
      '''
        Display a picture with superimposed histogram of the image
      '''    
      
      print('image size:', np.shape(MyImage))
-     indexXmax=np.argmax(np.sum(MyImage,0))
-     indexYmax=np.argmax(np.sum(MyImage,1))
+     if (center==None):
+        indexXmax=np.argmax(np.sum(MyImage,0))
+        indexYmax=np.argmax(np.sum(MyImage,1))
+     else:
+         px, py, xx, yy = GetImageProjection(MyImage, 1)
+         indexXmax=np.sum(px*xx)/np.sum(px)
+         indexYmax=np.sum(py*yy)/np.sum(py)
+
      ImShape=np.shape(MyImage)
      calx=cal
      caly=cal
@@ -352,9 +367,60 @@ def DisplayCalibratedProj(MyImage, cal, fudge):
      plt.plot(yhist, ycoord,color='r', linewidth=3) 
      plt.ylim(ymin, ymax)
      plt.xlim(xmin, xmax)
-     plt.colorbar()
+#     plt.colorbar()
      
+
+def DisplayCalibratedHorProj(MyImage, cal, fudge, center=None):
+     '''
+       Display a picture with superimposed horizontal histogram of the image
+     '''    
      
+     print('image size:', np.shape(MyImage))
+          
+     if (center==None):
+        indexXmax=np.argmax(np.sum(MyImage,0))
+        indexYmax=np.argmax(np.sum(MyImage,1))
+     else:
+         px, py, xx, yy = GetImageProjection(MyImage, 1)
+         indexXmax=np.sum(px*xx)/np.sum(px)
+         indexYmax=np.sum(py*yy)/np.sum(py)
+
+     ImShape=np.shape(MyImage)
+     calx=cal
+     caly=cal
+     
+     xmin=calx*(0.-indexXmax)
+     xmax=calx*(ImShape[0]-indexXmax)
+     ymin=caly*(0.-indexYmax)
+     ymax=caly*(ImShape[1]-indexYmax)
+
+     xhist, yhist, xcoord, ycoord = GetImageProjection(MyImage, cal)
+     
+     xcoord = xmin+xcoord
+     ycoord = ymin+ycoord
+# now alows for fudge to be an array to define an arbitrary offset     
+     if (hasattr(fudge, "__len__")):
+        xmin   = fudge[0]
+        ymin   = fudge[0]
+        xhist  = xmin + fudge[1]*(ymax-ymin)*xhist/np.max(xhist)
+        yhist  = ymin + fudge[1]*(xmax-xmin)*yhist/np.max(yhist)
+     else:
+        xhist  = ymin+ fudge*(ymax-ymin)*xhist/np.max(xhist)
+        yhist  = xmin+ fudge*(xmax-xmin)*yhist/np.max(yhist)
+     
+#     print ImShape
+#     print indexXmax, indexYmax
+     print(xmin, xmax, ymin, ymax)
+
+     plt.imshow(MyImage, aspect='auto', cmap=beam_map,origin='lower',extent=[xmin, xmax, ymin, ymax])
+     plt.plot(xcoord,xhist,color='r',linewidth=1) 
+     plt.fill_between(xcoord,xmin, xhist, facecolor='red', alpha=0.5) 
+#     plt.plot(yhist, ycoord,color='r', linewidth=3) 
+     plt.ylim(ymin, ymax)
+     plt.xlim(xmin, xmax)
+#     plt.colorbar()
+     
+
      
 def Normalize(MyImage):
      '''
