@@ -5,11 +5,12 @@
   Gaussian fit, etc...
   originated: P. Piot (PP), June 2015 
   changes:
-
+  - PP, 03/19/2019: some skimage feature disabled due to imcompatibility with npy 1.16, 
+                    fixed bug in image centering in DisplayCalImage.
+		    TODO: need introduce a calibration function 
   - AH, 03/15/2016: added peak normalization, and MonteCarlo functions (AH= A. Halavanau)
   - PP, 11/18/2015: merged different version + added comments on all functions
   - PP, 11/21/2015: added Kyle Capobianco-Hogan's rms calculations
-   
 '''
 import numpy as np
 import pylab as pyl
@@ -23,8 +24,8 @@ import scipy.stats
 from scipy import ndimage
 from cosmetics import * 
 from scipy import ndimage
-from skimage import feature 
-from skimage import measure
+# from skimage import feature #pp broken with numpy1.16 jan2019
+# from skimage import measure #pp broken with numpy1.16 jan2019
 from matplotlib.widgets import RectangleSelector
 
 #from skimage.filters import sobel
@@ -147,7 +148,7 @@ def CannyCrop(MyImage):  # !!!!!! NOT WORKING !!!!!!
      
 #     contours = measure.find_contours(r, 0.500)
      
-     edges = feature.canny(MyImage)     
+     edges = 0 # feature.canny(MyImage)     #pp broken with numpy1.16 jan2019 
      pts = np.argwhere(edges>0)
 #     y1,x1 = pts.min(axis=0)
 #     y2,x2 = pts.max(axis=0)
@@ -313,11 +314,11 @@ def GetImageProjectionCal(MyImage, cal):
 
      calx=cal
      caly=cal
-
+##PP MAR-2019 corrected an error in ImShape[0] and [1] initially flipped 
      xmin=calx*(0.-indexXmax)
-     xmax=calx*(ImShape[0]-indexXmax)
+     xmax=calx*(ImShape[1]-indexXmax)
      ymin=caly*(0.-indexYmax)
-     ymax=caly*(ImShape[1]-indexYmax)
+     ymax=caly*(ImShape[0]-indexYmax)
      
      xhist = np.sum(MyImage,0)/np.sum(np.sum(MyImage,0))
      yhist = np.sum(MyImage,1)/np.sum(np.sum(MyImage,1))
@@ -340,15 +341,15 @@ def DisplayCalibratedProj(MyImage, cal, fudge, center=None):
          px, py, xx, yy = GetImageProjection(MyImage, 1)
          indexXmax=np.sum(px*xx)/np.sum(px)
          indexYmax=np.sum(py*yy)/np.sum(py)
-
+         print ("centers=", indexXmax, indexYmax)
      ImShape=np.shape(MyImage)
      calx=cal
      caly=cal
      
      xmin=calx*(0.-indexXmax)
-     xmax=calx*(ImShape[0]-indexXmax)
+     xmax=calx*(ImShape[1]-indexXmax)
      ymin=caly*(0.-indexYmax)
-     ymax=caly*(ImShape[1]-indexYmax)
+     ymax=caly*(ImShape[0]-indexYmax)
      
      xhist = np.sum(MyImage,0)/np.max(np.sum(MyImage,0))
      yhist = np.sum(MyImage,1)/np.max(np.sum(MyImage,1))
@@ -363,8 +364,8 @@ def DisplayCalibratedProj(MyImage, cal, fudge, center=None):
      print(xmin, xmax, ymin, ymax)
 
      plt.imshow(MyImage, aspect='auto', cmap=beam_map,origin='lower',extent=[xmin, xmax, ymin, ymax])
-     plt.plot(xcoord,xhist,color='r',linewidth=3) 
-     plt.plot(yhist, ycoord,color='r', linewidth=3) 
+     plt.plot(xcoord,xhist,color='C0',linewidth=2) 
+     plt.plot(yhist, ycoord,color='C1',linewidth=2) 
      plt.ylim(ymin, ymax)
      plt.xlim(xmin, xmax)
 #     plt.colorbar()
