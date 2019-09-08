@@ -171,7 +171,7 @@ def RemoveEdge(MyImage, edgesize):
        maximum intensity)
      '''    
      MyShape=np.shape(MyImage)
-     return(MyImage[edgesize:MyShape[1]-edgesize,edgesize:MyShape[0]-edgesize ])
+     return(MyImage[edgesize:MyShape[0]-edgesize,edgesize:MyShape[1]-edgesize ])
      
      
 def Crop(MyImage, center, hbbox):
@@ -331,6 +331,7 @@ def GetImageProjectionCal(MyImage, cal):
 def DisplayCalibratedProj(MyImage, cal, fudge, center=None):
      '''
        Display a picture with superimposed histogram of the image
+       return the projections (PP 4/16/19)
      '''    
      
      print('image size:', np.shape(MyImage))
@@ -369,6 +370,7 @@ def DisplayCalibratedProj(MyImage, cal, fudge, center=None):
      plt.ylim(ymin, ymax)
      plt.xlim(xmin, xmax)
 #     plt.colorbar()
+     return(xcoord, np.sum(MyImage,0)/np.max(np.sum(MyImage,0)), ycoord, np.sum(MyImage,1)/np.max(np.sum(MyImage,1)))
      
 
 def DisplayCalibratedHorProj(MyImage, cal, fudge, center=None):
